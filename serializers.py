@@ -40,3 +40,33 @@ class CentreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Centre
         fields = "__all__"
+
+class AchatSerializer(serializers.ModelSerializer):
+    prdA = ProduitSerializer(read_only = True)
+    fournisseurA = FournisseurSerializer(read_only = True)
+    class Meta:
+        model = Achat
+        fields = "__all__"
+
+class VentesSerializer(serializers.ModelSerializer):
+    prdV = ProduitSerializer(read_only = True)
+    cleintV = ClientSerializer(read_only = True)
+    class Meta:
+        model = Vente
+        fields = "__all__"
+
+
+class VersementSerializer(serializers.ModelSerializer):
+    achat = AchatSerializer(read_only = True)
+    vente = VentesSerializer(read_only= True)
+    class Meta:
+        model =Versement
+        fields = "__all__"
+
+class TransferSerializer(serializers.ModelSerializer):
+    prdT = ProduitSerializer(read_only = True)
+    centreT = CentreSerializer(read_only=True)
+    
+    class Meta:
+        model =Transfert
+        fields = "__all__"

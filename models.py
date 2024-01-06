@@ -12,6 +12,7 @@ class Utilisateur(models.Model):
     ('admin', 'Admin'),
     ('client', 'Client'),
     ('fournisseur', 'Fournisseur'),
+    ('employe', 'Employe'),
     )   
     nom = models.CharField(max_length = 50,null=False)
     prenom = models.CharField(max_length = 50,null=False)
@@ -33,6 +34,17 @@ class Employe(models.Model):
     employe = models.ForeignKey(Utilisateur, on_delete = models.CASCADE, null=False)
     centre = models.ForeignKey(Centre, on_delete=models.CASCADE, null=False, related_name='employes')
     sallaire = models.FloatField()
+    def calculer_salaire_mensuel(self, mois, annee):
+        masabs_du_mois = self.masroufetabssences.filter(
+            dateMA__year=annee, 
+            dateMA__month=mois
+        )
+
+        total_masrouf = sum(masabs.montantMA for masabs in masabs_du_mois if masabs.typeMA == 'masrouf')
+        jours_absence = masabs_du_mois.filter(typeMA='abssence').count()
+        deduction_absence = jours_absence * self.sallaire
+        salaire_final = (self.sallaire*30 - total_masrouf - deduction_absence)
+        return salaire_final
     def __str__(self):
         return "Employe: "+self.employe.nom+'-'+self.employe.prenom+" Centre: "+self.centre.desigC
 
@@ -61,6 +73,9 @@ class Produit(models.Model):
     trashP = models.SmallIntegerField(default = 0)
     def __str__(self):
         return self.desigP
+    def get_last_price(self):
+        last_achat = Achat.objects.filter(prdA=self).order_by('-dateA').first()
+        return last_achat.prixA if last_achat else 0
 
 
 class Achat(models.Model):
@@ -165,9 +180,15 @@ class Transfert(models.Model):
     dateT = models.DateTimeField()
     prdT = models.ForeignKey(Produit,on_delete=models.CASCADE, null=False)
     qntT = models.PositiveIntegerField()
-    centreT = models.ForeignKey(Centre, on_delete=models.DO_NOTHING, null = True, related_name='transferts')
+    totalT = models.FloatField(default = 0)
+    centreT = models.ForeignKey(Centre, on_delete=models.CASCADE, null = True, related_name='transferts')
+    def save(self, *args, **kwargs):
+        self.totalT = self.prdT.get_last_price() * self.qntT
+        super(Transfert, self).save(*args, **kwargs)
+
     def __str__(self):
         return "Transfer de : "+self.prdT.desigP+" A : "+self.centreT.desigC
+    
 
 
 class MasAbs(models.Model):
@@ -183,7 +204,7 @@ class MasAbs(models.Model):
         if self.typeMA == 'abssence':
             return "Abssence :"+self.empMA.employe.nom
         else:
-            return "Masrouf :"+self.empMA.employe.nom+" De: "+self.montantMA+" Da"
+            return "Masrouf :"+self.empMA.employe.nom
         
 
 
